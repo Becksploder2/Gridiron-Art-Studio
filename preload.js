@@ -1,5 +1,7 @@
 const {contextBridge,ipcRenderer}=require('electron');
 contextBridge.exposeInMainWorld('studio',{
+installLocalAI:()=>ipcRenderer.invoke('local:install'),
+onLocalProgress:callback=>ipcRenderer.on('local:progress',(_,data)=>callback(data)),
 chooseEngine:()=>ipcRenderer.invoke('local:chooseEngine'),
 chooseModel:()=>ipcRenderer.invoke('local:chooseModel'),
 localStatus:()=>ipcRenderer.invoke('local:status'),
