@@ -8,8 +8,8 @@
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder",
-    "dist:win": "electron-builder --win",
-    "dist:mac": "electron-builder --mac"
+    "dist:win": "electron-builder --win --publish never",
+    "dist:mac": "electron-builder --mac --publish never"
   },
   "devDependencies": {
     "electron": "^33.4.11",
@@ -27,6 +27,8 @@
       "index.html",
       "renderer.js",
       "style.css",
+      "template-editor.js",
+      "tabs.js",
       "package.json"
     ],
     "win": {
