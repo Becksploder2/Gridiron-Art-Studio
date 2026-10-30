@@ -1,0 +1,1 @@
+const ai=document.getElementById('aiWorkspace'),templates=document.getElementById('templateWorkspace');document.getElementById('aiTab').onclick=()=>{ai.hidden=false;templates.hidden=true};document.getElementById('uniformTab').onclick=()=>{ai.hidden=true;templates.hidden=false};
