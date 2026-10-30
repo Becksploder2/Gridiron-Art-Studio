@@ -14,3 +14,6 @@ $('engineBtn').onclick=async()=>{try{const p=await window.studio.chooseEngine();
 $('modelBtn').onclick=async()=>{try{const p=await window.studio.chooseModel();if(p)$('modelPath').textContent=p}catch(e){status(e.message)}};
 $('closeSetup').onclick=()=>$('settingsDialog').close();
 window.studio.localStatus().then(s=>{if(s.engine)$('enginePath').textContent=s.engine;if(s.model)$('modelPath').textContent=s.model;if(s.engine&&s.model)status('Local AI configured. Ready to generate.')}).catch(()=>{});
+
+$('installAiBtn').onclick=async()=>{const b=$('installAiBtn');b.disabled=true;$('installProgress').textContent='Starting download...';try{const s=await window.studio.installLocalAI();$('enginePath').textContent=s.engine;$('modelPath').textContent=s.model;status('Local AI installed. Ready to generate.');$('installProgress').textContent='Installation completed.'}catch(e){$('installProgress').textContent='Installation failed: '+e.message;status('Local AI installation failed: '+e.message)}finally{b.disabled=false}};
+window.studio.onLocalProgress(p=>{$('installProgress').textContent=p.stage+': '+p.detail});
