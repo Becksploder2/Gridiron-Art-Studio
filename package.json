@@ -1,6 +1,6 @@
 {
   "name": "gridiron-art-studio",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Offline football artwork studio with local Stable Diffusion engine integration",
   "main": "main.js",
   "author": "Gridiron Art Studio",
