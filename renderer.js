@@ -1,0 +1,10 @@
+const $=id=>document.getElementById(id);let reference=null,current=null,busy=false;
+function status(message){$('status').textContent=message}
+function setBusy(value){busy=value;$('generateBtn').disabled=value;$('reviseBtn').disabled=value;$('saveBtn').disabled=value||!current;$('generateBtn').textContent=value?'Generating image…':'✦ Generate Artwork'}
+$('settingsBtn').onclick=()=>$('settingsDialog').showModal();
+$('saveKeyBtn').onclick=async()=>{try{const msg=await window.studio.saveKey($('keyInput').value);$('keyInput').value='';$('keyStatus').textContent=msg;status('API key configured. Ready to generate.')}catch(e){$('keyStatus').textContent=e.message}};
+$('referenceBtn').onclick=async()=>{try{reference=await window.studio.chooseReference();if(reference){$('referenceLabel').textContent='Reference: '+reference.name;status('Reference imported; next generation will use it.')}}catch(e){status(e.message)}};
+async function generate(revise){if(busy)return;const prompt=$('prompt').value.trim();if(!prompt){status('Please describe the artwork first.');return}if(revise&&!current){status('Generate an image before requesting a revision.');return}setBusy(true);status('Contacting AI image service. Generation may take a little while…');try{const next=await window.studio.generate({category:$('category').value,game:$('game').value,prompt,reference:revise?null:reference,previous:revise?current:null,revision:revise?$('revision').value.trim():''});current=next;$('result').src='data:image/png;base64,'+current.base64;$('result').hidden=false;$('placeholder').hidden=true;status('Artwork generated. You can save it or request a revision.')}catch(e){status('Generation failed: '+e.message)}finally{setBusy(false)}}
+$('generateBtn').onclick=()=>generate(false);$('reviseBtn').onclick=()=>generate(true);
+$('saveBtn').onclick=async()=>{if(!current)return;try{const file=await window.studio.save(current.base64,($('category').value+'-art').toLowerCase());if(file)status('Saved: '+file)}catch(e){status('Save failed: '+e.message)}};
+window.studio.status().then(s=>{if(s.configured)status('API key configured. Ready to generate.')}).catch(()=>{});
