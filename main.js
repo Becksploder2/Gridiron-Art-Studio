@@ -84,7 +84,7 @@ ipcMain.handle('image:generate',async(_,input)=>{
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'gridiron-ai-'));
  const output=path.join(dir,'art.png');
  const source=previous||reference;
- const instructions='Original American football graphic design, clean isolated flat sports artwork, solid high contrast colors, no photography, no stadium, no grass, no mockup. '+targets[category]+' Team/game: '+String(game||'football')+'. '+prompt+(revision?' Change requested: '+revision:'');
+ const instructions='Follow EVERY requirement in the user description. Do not omit any objects, colors, text, quantities, positioning or exclusions. If the model cannot satisfy a requirement, the result must be reviewed before export. Original American football graphic design, clean isolated flat sports artwork, solid high contrast colors, no photography, no stadium, no grass, no mockup. '+targets[category]+' Team/game: '+String(game||'football')+'. '+prompt+(revision?' Change requested: '+revision:'');
  const args=['--model',s.model,'--prompt',instructions,'--output',output,'--width',512,'--height',512,'--steps','20','--cfg-scale','7','--seed','-1'];
  try{
   if(source?.base64){
