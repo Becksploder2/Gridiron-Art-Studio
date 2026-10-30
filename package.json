@@ -1,7 +1,7 @@
 {
   "name": "gridiron-art-studio",
-  "version": "0.1.0",
-  "description": "AI football graphics desktop studio",
+  "version": "0.2.0",
+  "description": "Offline football artwork studio with local Stable Diffusion engine integration",
   "main": "main.js",
   "author": "Gridiron Art Studio",
   "license": "MIT",
