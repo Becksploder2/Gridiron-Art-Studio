@@ -56,6 +56,8 @@ ipcMain.handle('local:install',async()=>{
   const archive=new AdmZip(zipPath);
   for(const entry of archive.getEntries()){if(entry.entryName.includes('..')||path.isAbsolute(entry.entryName))throw new Error('Unsafe archive entry');}
   archive.extractAllTo(engineDir,true);
+  const runtime=(release.assets||[]).find(a=>/^cudart-sd-bin-win-cu12-x64\\.zip$/i.test(a.name));
+  if(runtime){const runtimeZip=path.join(base,'cuda-runtime.zip');progress('Downloading','Downloading CUDA runtime...');await download(runtime.browser_download_url,runtimeZip);new AdmZip(runtimeZip).extractAllTo(engineDir,true);await fs.rm(runtimeZip,{force:true});}
   const engine=await findEngine(engineDir);
   if(!engine)throw new Error('Engine downloaded, but sd-cli executable was not found.');
   await fs.rm(zipPath,{force:true});
