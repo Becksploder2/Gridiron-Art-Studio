@@ -46,7 +46,7 @@ ipcMain.handle('local:install',async()=>{
   const response=await fetch('https://api.github.com/repos/leejet/stable-diffusion.cpp/releases/latest',{headers:{'User-Agent':'Gridiron-Art-Studio/0.3','Accept':'application/vnd.github+json'}});
   if(!response.ok)throw new Error('Could not check engine releases ('+response.status+').');
   const release=await response.json();
-  const candidates=(release.assets||[]).filter(a=>/\.zip$/i.test(a.name)&&/win/i.test(a.name)&&/cuda/i.test(a.name));
+  const candidates=(release.assets||[]).filter(a=>/\.zip$/i.test(a.name)&&/-bin-win-cuda12-x64\.zip$/i.test(a.name)&&!/^cudart-/i.test(a.name));
   if(!candidates.length)throw new Error('No Windows CUDA ZIP was found in the latest engine release. Automatic setup cannot proceed.');
   const asset=candidates[0];
   progress('Downloading','Downloading NVIDIA engine...');
@@ -59,7 +59,7 @@ ipcMain.handle('local:install',async()=>{
   const runtime=(release.assets||[]).find(a=>/^cudart-sd-bin-win-cu12-x64\\.zip$/i.test(a.name));
   if(runtime){const runtimeZip=path.join(base,'cuda-runtime.zip');progress('Downloading','Downloading CUDA runtime...');await download(runtime.browser_download_url,runtimeZip);new AdmZip(runtimeZip).extractAllTo(engineDir,true);await fs.rm(runtimeZip,{force:true});}
   const engine=await findEngine(engineDir);
-  if(!engine)throw new Error('Engine downloaded, but sd-cli executable was not found.');
+  if(!engine){const names=await fs.readdir(engineDir);throw new Error('Engine executable missing after extraction. Archive: '+asset.name+'. Extracted entries: '+names.slice(0,12).join(', '));}
   await fs.rm(zipPath,{force:true});
   if(!(await fs.stat(modelPath).catch(()=>null))?.size|| (await fs.stat(modelPath)).size<100000000){
    progress('Downloading','Downloading Stable Diffusion 1.5 model (several GB)...');
