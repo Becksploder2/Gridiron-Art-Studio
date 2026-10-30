@@ -10,7 +10,7 @@ function status(message){$('status').textContent=message}
 function setBusy(value){busy=value;$('generateBtn').disabled=value;$('reviseBtn').disabled=value;$('saveBtn').disabled=value||!current||approved.size!==requirements.length;$('generateBtn').textContent=value?'Generating image…':'✦ Generate Artwork'}
 $('settingsBtn').onclick=()=>$('settingsDialog').showModal();
 $('referenceBtn').onclick=async()=>{try{reference=await window.studio.chooseReference();if(reference){$('referenceLabel').textContent='Reference: '+reference.name;status('Reference imported; next generation will use it.')}}catch(e){status(e.message)}};
-async function generate(revise){if(busy)return;const prompt=$('prompt').value.trim();if(!prompt){status('Please describe the artwork first.');return}if(revise&&!current){status('Generate an image before requesting a revision.');return}setBusy(true);status('Running local AI model. This may take several minutes…');try{const next=await window.studio.generate({category:$('category').value,game:$('game').value,prompt,reference:revise?null:reference,previous:revise?current:null,revision:revise?$('revision').value.trim():''});current=next;requirements=extractRequirements(prompt,revise?$('revision').value.trim():'');approved.clear();renderRequirements();$('result').src='data:image/png;base64,'+current.base64;$('result').hidden=false;$('placeholder').hidden=true;status('Artwork generated. Review every requirement before exporting; AI accuracy is not automatically verified.')}catch(e){status('Generation failed: '+e.message)}finally{setBusy(false)}}
+async function generate(revise){if(busy)return;if(revise&&/\b(text|lettering|word|words|spelling|name|font|caption|typography)\b/i.test($('revision').value)){status('Text-only revisions are protected from AI regeneration. Use the Text-Only Editor to change lettering without redrawing the mascot.');$('textEditor').hidden=false;return}const prompt=$('prompt').value.trim();if(!prompt){status('Please describe the artwork first.');return}if(revise&&!current){status('Generate an image before requesting a revision.');return}setBusy(true);status('Running local AI model. This may take several minutes…');try{const next=await window.studio.generate({category:$('category').value,game:$('game').value,prompt,reference:revise?null:reference,previous:revise?current:null,revision:revise?$('revision').value.trim():''});current=next;requirements=extractRequirements(prompt,revise?$('revision').value.trim():'');approved.clear();renderRequirements();$('result').src='data:image/png;base64,'+current.base64;$('result').hidden=false;$('placeholder').hidden=true;status('Artwork generated. Review every requirement before exporting; AI accuracy is not automatically verified.')}catch(e){status('Generation failed: '+e.message)}finally{setBusy(false)}}
 $('generateBtn').onclick=()=>generate(false);$('reviseBtn').onclick=()=>generate(true);
 $('saveBtn').onclick=async()=>{if(!current||approved.size!==requirements.length){status('Review and confirm every requirement before export.');return}try{const png=await sizedPng(current);const dims=exportDimensions();const file=await window.studio.save(png,($('game').value+'-'+$('category').value+'-'+dims.width+'x'+dims.height).toLowerCase().replace(/[^a-z0-9-]/g,'-'));if(file)status('Saved '+dims.width+'×'+dims.height+' PNG: '+file)}catch(e){status('Save failed: '+e.message)}};
 
@@ -24,3 +24,34 @@ window.studio.onLocalProgress(p=>{$('installProgress').textContent=p.stage+': '+
 
 $('prompt').addEventListener('input',()=>{if(current){approved.clear();requirements=extractRequirements($('prompt').value);renderRequirements()}});
 $('revision').addEventListener('input',()=>{if(current){approved.clear();requirements=extractRequirements($('prompt').value,$('revision').value);renderRequirements()}});
+
+let editImage=null,selection=null,dragStart=null;
+async function startTextEditor(){
+ if(!current){status('Generate or import artwork before editing text.');return}
+ const image=new Image();image.src='data:image/png;base64,'+current.base64;await image.decode();editImage=image;
+ const c=$('textCanvas');c.width=image.naturalWidth;c.height=image.naturalHeight;
+ c.getContext('2d').drawImage(image,0,0);selection=null;$('textEditor').hidden=false;
+ status('Select the lettering rectangle, then type the replacement. Only that rectangle can change.');
+}
+function textCoordinates(e){const r=$('textCanvas').getBoundingClientRect();return {x:Math.round((e.clientX-r.left)*$('textCanvas').width/r.width),y:Math.round((e.clientY-r.top)*$('textCanvas').height/r.height)}}
+function drawTextSelection(){const c=$('textCanvas'),ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);ctx.drawImage(editImage,0,0);if(selection){ctx.save();ctx.strokeStyle='#00e5ff';ctx.lineWidth=3;ctx.setLineDash([8,5]);ctx.strokeRect(selection.x,selection.y,selection.w,selection.h);ctx.restore()}}
+$('textCanvas').addEventListener('pointerdown',e=>{if(!editImage)return;dragStart=textCoordinates(e);$('textCanvas').setPointerCapture(e.pointerId)});
+$('textCanvas').addEventListener('pointermove',e=>{if(!dragStart)return;const p=textCoordinates(e);selection={x:Math.min(dragStart.x,p.x),y:Math.min(dragStart.y,p.y),w:Math.abs(p.x-dragStart.x),h:Math.abs(p.y-dragStart.y)};drawTextSelection()});
+$('textCanvas').addEventListener('pointerup',()=>{dragStart=null});
+$('openTextEditor').onclick=()=>startTextEditor().catch(e=>status(e.message));
+$('cancelTextEdit').onclick=()=>{$('textEditor').hidden=true;selection=null};
+$('applyTextEdit').onclick=async()=>{
+ const text=$('replacementText').value.trim();
+ if(!editImage||!selection||selection.w<10||selection.h<10||!text){status('Select a text region and enter replacement lettering.');return}
+ const c=document.createElement('canvas');c.width=editImage.naturalWidth;c.height=editImage.naturalHeight;
+ const ctx=c.getContext('2d');ctx.drawImage(editImage,0,0);
+ const {x,y,w,h}=selection;
+ ctx.fillStyle=$('textBackground').value;ctx.fillRect(x,y,w,h);
+ ctx.fillStyle=$('textColor').value;ctx.textAlign='center';ctx.textBaseline='middle';
+ let size=Math.min(h*.72,110);do{ctx.font='900 '+Math.floor(size)+'px Impact,Arial,sans-serif';if(ctx.measureText(text).width<=w*.94)break;size-=2}while(size>8);
+ ctx.fillText(text,x+w/2,y+h/2,w*.94);
+ current={base64:c.toDataURL('image/png').split(',')[1],mime:'image/png',name:'text-edited.png'};
+ $('result').src='data:image/png;base64,'+current.base64;
+ $('textEditor').hidden=true;requirements=extractRequirements($('prompt').value,'Replace selected lettering with '+text);approved.clear();renderRequirements();
+ status('Text changed only inside your selected rectangle. Inspect the covered background and lettering before export.');
+};
